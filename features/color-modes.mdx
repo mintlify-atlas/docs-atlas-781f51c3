@@ -1,0 +1,117 @@
+---
+title: 'Single and gradient color generation modes explained'
+description: 'Color Flipper supports two generation modes: single produces one solid hex color, while gradient blends two hex colors into a smooth linear gradient.'
+---
+
+Color Flipper lets you work in two distinct modes: **Single** mode for generating and copying one solid color, and **Gradient** mode for creating a two-stop linear gradient from a pair of hex colors. The active mode controls what is previewed, what gets pushed to history, and what the **Copy** button places on your clipboard.
+
+## Mode state
+
+The active mode is stored in a single piece of React state inside `ColorFlipper.jsx`. It defaults to `"single"` and can only ever be one of two values:
+
+```jsx ColorFlipper.jsx
+const [mode, setMode] = useState("single"); // 'single' | 'gradient'
+```
+
+## Switching modes
+
+The **Controls** panel exposes a segmented button group that calls `setMode` directly. The currently active segment receives the `active` class:
+
+```jsx Controls.jsx
+<div className="segmented" role="tablist" aria-label="mode">
+  <button
+    className={mode === "single" ? "active" : ""}
+    onClick={() => setMode("single")}
+  >
+    Single
+  </button>
+  <button
+    className={mode === "gradient" ? "active" : ""}
+    onClick={() => setMode("gradient")}
+  >
+    Gradient
+  </button>
+</div>
+```
+
+Switching modes is instant — no color values are reset, so you can freely toggle between modes without losing your current colors.
+
+## How each mode behaves
+
+<Tabs>
+  <Tab title="Single mode">
+    In Single mode only `colorA` is used. The preview section receives a plain CSS background color, and the displayed value is the hex string (or its RGB equivalent) of `colorA` alone.
+
+    ```jsx ColorPreview.jsx
+    const previewStyle =
+      mode === "single"
+        ? { background: colorA }
+        : { background: `linear-gradient(135deg, ${colorA}, ${colorB})` };
+    ```
+
+    When **Random** is clicked in Single mode, one new hex is generated and `colorA` is updated:
+
+    ```jsx ColorPreview.jsx
+    function applyRandom() {
+      if (mode === "single") {
+        const h = randomHex();
+        setColorA(h);
+        pushHistory(h);
+      }
+      // ...
+    }
+    ```
+
+    The **Color B** input in the Controls panel is hidden while Single mode is active.
+  </Tab>
+  <Tab title="Gradient mode">
+    In Gradient mode both `colorA` and `colorB` are used together. The preview background becomes a 135-degree linear gradient:
+
+    ```jsx ColorPreview.jsx
+    { background: `linear-gradient(135deg, ${colorA}, ${colorB})` }
+    ```
+
+    When **Random** is clicked in Gradient mode, two independent hex colors are generated and the gradient is pushed to history as a full CSS string:
+
+    ```jsx ColorPreview.jsx
+    } else {
+      const h1 = randomHex();
+      const h2 = randomHex();
+      setColorA(h1);
+      setColorB(h2);
+      pushHistory(`linear-gradient(${h1}, ${h2})`);
+    }
+    ```
+
+    The Controls panel reveals the **Color B** input so you can type or paste a second hex value manually:
+
+    ```jsx Controls.jsx
+    {mode === "gradient" && (
+      <div>
+        <label>Color B</label>
+        <input
+          value={colorB}
+          onChange={(e) => setColorB(e.target.value)}
+          placeholder="#5ab1ff"
+        />
+      </div>
+    )}
+    ```
+  </Tab>
+</Tabs>
+
+## Saving to history
+
+Both modes push a string to the history array when you click **Save to History** or **Random**. The format of the saved string differs by mode:
+
+```jsx Controls.jsx
+function saveToHistory() {
+  if (mode === "single") pushHistory(colorA);
+  else pushHistory(`linear-gradient(${colorA}, ${colorB})`);
+  setCopied("Saved");
+}
+```
+
+<Tip>
+  History items store the raw CSS value, so restoring a gradient item automatically switches you back to Gradient mode. See the [history page](/features/history) for details.
+</Tip>

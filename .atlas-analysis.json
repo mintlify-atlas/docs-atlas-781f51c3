@@ -1,0 +1,53 @@
+{
+  "projectType": "frontend",
+  "projectName": "Color Flipper",
+  "projectDescription": "An interactive React application for generating, previewing, and managing random colors in HEX and RGB formats with gradient support and clipboard copy.",
+  "theme": "almond",
+  "primaryColor": "#51aec4",
+  "lightColor": "#3f7c8c",
+  "darkColor": "#262c35",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": ["introduction", "quickstart", "project-structure"]
+      },
+      {
+        "group": "Features",
+        "pages": ["features/color-modes", "features/color-formats", "features/history", "features/clipboard"]
+      },
+      {
+        "group": "Components",
+        "pages": ["components/color-flipper", "components/color-preview", "components/controls", "components/history", "components/toast"]
+      },
+      {
+        "group": "Utilities & Customization",
+        "pages": ["utilities/color-utils", "customization/styling"]
+      },
+      {
+        "group": "Deployment",
+        "pages": ["deployment/build", "deployment/deploy"]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Random color generation in HEX and RGB formats",
+    "Single color and gradient (two-color) modes",
+    "One-click clipboard copy with toast notifications",
+    "Persistent color history stored in localStorage (up to 20 entries)",
+    "Reuse any history item with one click",
+    "Fully responsive layout for mobile, tablet, and desktop",
+    "Modular CSS architecture with per-component stylesheets"
+  ],
+  "publicApiSurface": [
+    "randomHex() — generates a random 6-digit hex color string",
+    "hexToRgb(hex) — converts a HEX color string to rgb() notation",
+    "formatValue(value, format) — formats a color or gradient value as HEX or RGB",
+    "copyValue(text, setCopied) — copies text to clipboard with fallback and auto-reset",
+    "<ColorFlipper /> — root component managing all state",
+    "<ColorPreview mode colorA colorB format setCopied pushHistory setColorA setColorB />",
+    "<Controls mode setMode format setFormat colorA setColorA colorB setColorB pushHistory clearHistory setCopied />",
+    "<History history setMode setColorA setColorB pushHistory />",
+    "<Toast message onClose />"
+  ]
+}

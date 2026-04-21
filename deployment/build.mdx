@@ -1,0 +1,91 @@
+---
+title: "Build and preview the Color Flipper production bundle"
+description: "Compile Color Flipper into a minified, optimized bundle using Vite's production build pipeline, then preview it locally before shipping."
+---
+
+Vite transforms Color Flipper's React source into a lean, production-ready bundle by tree-shaking unused code, minifying JavaScript and CSS, and splitting chunks for efficient browser caching. The entire process runs through a single command and outputs a self-contained `dist/` directory you can deploy to any static hosting provider.
+
+## Build for production
+
+Run the build command with your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm run build
+```
+
+```bash yarn
+yarn build
+```
+
+```bash pnpm
+pnpm build
+```
+
+</CodeGroup>
+
+Vite executes `vite build` (as defined in `package.json`) and writes the output to `dist/`.
+
+## What Vite produces
+
+After the build completes, the `dist/` directory contains everything needed to serve the app:
+
+- `dist/index.html` — the entry HTML file with hashed asset references
+- `dist/assets/` — minified JavaScript chunks and CSS files with content-hash filenames for long-term caching
+- Any static files copied from `public/`
+
+Vite automatically applies the following optimizations during the build:
+
+- **Tree-shaking** — removes unused code from the final bundle
+- **Code splitting** — splits vendor and app code into separate chunks
+- **Minification** — compresses JavaScript with esbuild and CSS with Lightning CSS
+- **Asset hashing** — appends a content hash to file names so browsers cache aggressively but never serve stale files
+
+## Current Vite configuration
+
+Color Flipper uses this `vite.config.js`:
+
+```js vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+The `@vitejs/plugin-react` plugin handles JSX transformation and React Fast Refresh during development.
+
+## Build → preview → verify workflow
+
+<Steps>
+  <Step title="Run the production build">
+    Execute the build command to compile all source files into `dist/`:
+
+    ```bash
+    npm run build
+    ```
+
+    Vite prints a summary of each output file and its size when the build succeeds.
+  </Step>
+
+  <Step title="Preview the production bundle locally">
+    Start Vite's built-in preview server to serve the `dist/` directory on your machine:
+
+    ```bash
+    npm run preview
+    ```
+
+    The app is available at `http://localhost:4173` by default. This server uses the same static files that will be deployed, so it faithfully reproduces the production environment.
+  </Step>
+
+  <Step title="Verify the app works as expected">
+    Open `http://localhost:4173` and confirm that color generation, format switching, clipboard copy, and color history all behave correctly. Check the browser console for any runtime errors before proceeding to deployment.
+  </Step>
+</Steps>
+
+<Tip>
+  Always run `npm run preview` before deploying. The development server (`npm run dev`) uses unbundled ESM modules and may behave differently from the optimized bundle that production users receive.
+</Tip>

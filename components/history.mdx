@@ -1,0 +1,132 @@
+---
+title: "History component: saved colors and restore sidebar"
+description: "History renders a scrollable grid of previously saved colors and gradients, and restores any entry back into the active color state when clicked."
+---
+
+`History` displays the list of colors and gradients that have been saved during the session. Each entry renders as a clickable swatch button: clicking it calls `useHistoryItem()`, which parses the stored string and restores it to the active color state by calling the appropriate setters. Single hex colors set `mode` to `"single"` and update `colorA`; gradient strings set `mode` to `"gradient"` and populate both `colorA` and `colorB`. When the history array is empty, a placeholder message is shown instead.
+
+## Usage
+
+`History` is rendered inside the `<aside>` of `ColorFlipper`:
+
+```jsx ColorFlipper.jsx
+<History
+  history={history}
+  setMode={setMode}
+  setColorA={setColorA}
+  setColorB={setColorB}
+/>
+```
+
+## Props
+
+<ParamField path="history" type="array" required>
+  Ordered array of color strings. Each entry is either a hex string (e.g. `"#a3c4bc"`) or a gradient string (e.g. `"linear-gradient(#ff7a59, #5ab1ff)"`). Defaults to `[]`.
+</ParamField>
+
+<ParamField path="setMode" type="function" required>
+  State setter for the active mode. Called with `"single"` when restoring a hex entry, or `"gradient"` when restoring a gradient entry.
+</ParamField>
+
+<ParamField path="setColorA" type="function" required>
+  State setter for the primary color. Always called when restoring any history entry.
+</ParamField>
+
+<ParamField path="setColorB" type="function" required>
+  State setter for the secondary color. Called only when restoring a gradient entry that contains two valid hex values.
+</ParamField>
+
+## `useHistoryItem()` function
+
+This internal function handles all three possible string shapes stored in history:
+
+```jsx History.jsx
+function useHistoryItem(item) {
+  if (!item) return;
+  if (item.startsWith("linear-gradient")) {
+    const matches = item.match(/#([0-9a-fA-F]{6})/g) || [];
+    if (matches.length >= 2) {
+      setMode("gradient");
+      setColorA(matches[0]);
+      setColorB(matches[1]);
+    }
+  } else if (item.startsWith("#")) {
+    setMode("single");
+    setColorA(item);
+  } else {
+    const m = item.match(/#([0-9a-fA-F]{6})/);
+    if (m) {
+      setMode("single");
+      setColorA(m[0]);
+    }
+  }
+}
+```
+
+## Gradient parsing
+
+For gradient strings, the component uses the regex `/#([0-9a-fA-F]{6})/g` to extract all six-digit hex values from the stored string. If at least two matches are found, the first is assigned to `colorA` and the second to `colorB`. This approach is tolerant of small variations in the gradient string format, since it only looks for hex values rather than parsing the full CSS function.
+
+<Note>
+  History is capped at 20 items. `ColorFlipper` enforces this limit inside `pushHistory` and also truncates the array before writing to `localStorage`. Older entries are dropped when the limit is reached.
+</Note>
+
+## localStorage persistence
+
+`History` itself is a pure display component — it does not read from or write to `localStorage` directly. All persistence logic lives in `ColorFlipper`, which initialises `history` from `localStorage` on mount and syncs it back on every change via a `useEffect`. See the [ColorFlipper component](/components/color-flipper) for the full persistence implementation.
+
+<Accordion title="Full source">
+
+```jsx History.jsx
+function History({ history = [], setMode, setColorA, setColorB }) {
+  function useHistoryItem(item) {
+    if (!item) return;
+    if (item.startsWith("linear-gradient")) {
+      const matches = item.match(/#([0-9a-fA-F]{6})/g) || [];
+      if (matches.length >= 2) {
+        setMode("gradient");
+        setColorA(matches[0]);
+        setColorB(matches[1]);
+      }
+    } else if (item.startsWith("#")) {
+      setMode("single");
+      setColorA(item);
+    } else {
+      const m = item.match(/#([0-9a-fA-F]{6})/);
+      if (m) {
+        setMode("single");
+        setColorA(m[0]);
+      }
+    }
+  }
+
+  return (
+    <div className="history" aria-label="Saved colors">
+      <h3>History</h3>
+
+      {history.length === 0 ? (
+        <p className="muted">No saved colors yet — generate one!</p>
+      ) : (
+        <div className="history-grid">
+          {history.map((h, i) => (
+            <button
+              key={i}
+              className="history-item"
+              onClick={() => useHistoryItem(h)}
+              title={h}
+              aria-label={`Use ${h}`}
+            >
+              <span className="chip" style={{ background: h }} />
+              <small>{h}</small>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default History;
+```
+
+</Accordion>

@@ -1,0 +1,116 @@
+---
+title: 'Copy to clipboard with auto-dismissing toast alerts'
+description: 'The Copy button writes the current color value to your clipboard in the selected format and confirms the action with an auto-dismissing toast notification.'
+---
+
+Clicking **Copy** in the preview panel writes the current color — formatted according to your active HEX or RGB selection — directly to the system clipboard. A toast notification appears immediately to confirm what was copied, then disappears on its own after two seconds. The entire flow is non-blocking: the rest of the UI remains fully interactive while the toast is visible.
+
+## How `copyValue` works
+
+The `copyValue` utility in `colorUtils.js` handles all clipboard writes. It first attempts the modern `navigator.clipboard` API, then falls back to a `textarea` + `document.execCommand` approach for environments where the Clipboard API is unavailable. Either way it calls `setCopied` with the copied text so the rest of the app can react:
+
+```js colorUtils.js
+export async function copyValue(text, setCopied) {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (typeof setCopied === 'function') setCopied(text);
+  } catch (e) {
+    // fallback
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      if (typeof setCopied === 'function') setCopied(text);
+    } catch {
+      if (typeof setCopied === 'function') setCopied('');
+    }
+  } finally {
+    // reset copied after 1.4s if setter passed
+    if (typeof setCopied === 'function') {
+      setTimeout(() => setCopied(''), 1400);
+    }
+  }
+}
+```
+
+The `finally` block resets the `copied` state to an empty string after **1400 ms**, regardless of whether the write succeeded or failed.
+
+## Triggering a copy from the preview
+
+`ColorPreview.jsx` assembles the value to copy by applying `formatValue` to the raw color state before passing it to `copyValue`:
+
+```jsx ColorPreview.jsx
+function handleCopy() {
+  const value =
+    mode === "single"
+      ? colorA
+      : `linear-gradient(${colorA}, ${colorB})`;
+  copyValue(formatValue(value, format), setCopied);
+}
+```
+
+<Note>
+  The copied value always respects the current format. If your format is set to **RGB**, the clipboard receives `rgb(58, 123, 213)` (or the equivalent gradient string) — not the raw hex. See [HEX and RGB format support](/features/color-formats) for how the conversion works.
+</Note>
+
+## Showing the toast
+
+When `setCopied` is called with a non-empty string, a `useEffect` in `ColorFlipper.jsx` fires `showToast`:
+
+```jsx ColorFlipper.jsx
+useEffect(() => {
+  if (copied) {
+    showToast(`Copied ${copied}!`);
+  }
+}, [copied]);
+```
+
+`showToast` sets the `toastMessage` state, which is passed straight to the `Toast` component:
+
+```jsx ColorFlipper.jsx
+<Toast message={toastMessage} onClose={() => setToastMessage("")} />
+```
+
+## Auto-dismissal in `Toast.jsx`
+
+`Toast` renders nothing when `message` is falsy. When a message arrives it starts a 2000 ms timer and calls `onClose` when it expires, which clears `toastMessage` back to an empty string:
+
+```jsx Toast.jsx
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2000); // auto dismiss
+      return () => clearTimeout(timer);
+    }
+  }, [message, onClose]);
+
+  if (!message) return null;
+
+  return <div className="toast">{message}</div>;
+}
+```
+
+## End-to-end flow
+
+<Steps>
+  <Step title="Click Copy">
+    The `handleCopy` function in `ColorPreview` builds the value string and calls `copyValue(formatValue(value, format), setCopied)`.
+  </Step>
+  <Step title="Write to clipboard">
+    `copyValue` attempts `navigator.clipboard.writeText`. If that fails it falls back to `document.execCommand('copy')` using a temporary `textarea`.
+  </Step>
+  <Step title="Trigger the toast">
+    `setCopied` is called with the copied text. The `useEffect` in `ColorFlipper` detects the change and calls `showToast(\`Copied \${copied}!\`)`.
+  </Step>
+  <Step title="Toast auto-dismisses">
+    `Toast` renders the message and sets a 2000 ms timeout. When it fires, `onClose` clears `toastMessage` and the toast disappears.
+  </Step>
+  <Step title="State resets">
+    The `finally` block in `copyValue` resets `copied` to `""` after 1400 ms, ready for the next copy action.
+  </Step>
+</Steps>

@@ -1,0 +1,252 @@
+---
+title: "ColorFlipper component: root app-wide state container"
+description: "ColorFlipper owns all app state — mode, format, colors, history, copy status, and toast messages — and distributes it to every child via props."
+---
+
+`ColorFlipper` is the single stateful component in the Color Flipper application. It initialises every piece of shared state, exposes helper functions (`pushHistory`, `clearHistory`, `showToast`), and renders the full page layout — including `ColorPreview`, `Controls`, `History`, and `Toast` — passing state and callbacks down as props. Because all state lives here, child components remain stateless and focused on presentation and interaction.
+
+## Usage
+
+`ColorFlipper` is mounted once, directly inside the `App` wrapper. It takes no props.
+
+```jsx App.jsx
+import ColorFlipper from "./components/ColorFlipper";
+
+const App = () => {
+  return (
+    <div className="cf-app">
+      <ColorFlipper />
+    </div>
+  );
+};
+```
+
+## Props
+
+`ColorFlipper` accepts no props. All state is initialised internally with `useState`.
+
+## State variables
+
+| Variable       | Type      | Initial value                           | Description                                               |
+| -------------- | --------- | --------------------------------------- | --------------------------------------------------------- |
+| `mode`         | `string`  | `"single"`                              | Display mode: `"single"` or `"gradient"`.                 |
+| `format`       | `string`  | `"hex"`                                 | Output format: `"hex"` or `"rgb"`.                        |
+| `colorA`       | `string`  | `randomHex()`                           | Primary color hex string (e.g. `"#a3c4bc"`).              |
+| `colorB`       | `string`  | `randomHex()`                           | Secondary color used in gradient mode.                    |
+| `history`      | `array`   | Loaded from `localStorage` or `[]`      | Ordered list of saved color/gradient strings (max 20).    |
+| `copied`       | `string`  | `""`                                    | Last copied value; triggers a toast when it changes.      |
+| `toastMessage` | `string`  | `""`                                    | Current message shown by the `Toast` component.           |
+
+## State initialisation
+
+History is lazy-initialised from `localStorage` so previously saved colors survive page refreshes. Any parse error falls back to an empty array.
+
+```jsx ColorFlipper.jsx
+const [history, setHistory] = useState(() => {
+  try {
+    return JSON.parse(localStorage.getItem("cf_history")) || [];
+  } catch {
+    return [];
+  }
+});
+```
+
+A `useEffect` keeps `localStorage` in sync every time `history` changes, capping the stored list at 20 items.
+
+```jsx ColorFlipper.jsx
+useEffect(() => {
+  try {
+    localStorage.setItem("cf_history", JSON.stringify(history.slice(0, 20)));
+  } catch {
+    // ignore storage errors
+  }
+}, [history]);
+```
+
+## Helper functions
+
+### `pushHistory(item)`
+
+Prepends `item` to the history array, deduplicates it, and trims the list to 20 entries.
+
+```jsx ColorFlipper.jsx
+function pushHistory(item) {
+  setHistory((prev) => {
+    const next = [item, ...prev.filter((x) => x !== item)];
+    return next.slice(0, 20);
+  });
+}
+```
+
+### `clearHistory()`
+
+Resets the history array to `[]`, removes the `cf_history` key from `localStorage`, and shows a toast.
+
+```jsx ColorFlipper.jsx
+function clearHistory() {
+  setHistory([]);
+  try {
+    localStorage.removeItem("cf_history");
+    showToast("History cleared!");
+  } catch {}
+}
+```
+
+## Passing state to child components
+
+`ColorFlipper` distributes state and callbacks directly via props. The render tree looks like this:
+
+```jsx ColorFlipper.jsx
+<ColorPreview
+  mode={mode}
+  colorA={colorA}
+  colorB={colorB}
+  format={format}
+  setCopied={setCopied}
+  pushHistory={pushHistory}
+  setColorA={setColorA}
+  setColorB={setColorB}
+/>
+
+<Controls
+  mode={mode}
+  setMode={setMode}
+  format={format}
+  setFormat={setFormat}
+  colorA={colorA}
+  setColorA={setColorA}
+  colorB={colorB}
+  setColorB={setColorB}
+  pushHistory={pushHistory}
+  clearHistory={clearHistory}
+  setCopied={setCopied}
+/>
+
+<History
+  history={history}
+  setMode={setMode}
+  setColorA={setColorA}
+  setColorB={setColorB}
+  pushHistory={pushHistory}
+/>
+
+<Toast message={toastMessage} onClose={() => setToastMessage("")} />
+```
+
+<Accordion title="Full source">
+
+```jsx ColorFlipper.jsx
+import { useEffect, useState } from "react";
+import ColorPreview from "./ColorPreview";
+import Controls from "./Controls";
+import History from "./History";
+import Toast from "./Toast";
+import { randomHex } from "../utils/colorUtils";
+
+function ColorFlipper() {
+  const [mode, setMode] = useState("single"); // 'single' | 'gradient'
+  const [format, setFormat] = useState("hex"); // 'hex' | 'rgb'
+  const [colorA, setColorA] = useState(randomHex());
+  const [colorB, setColorB] = useState(randomHex());
+  const [history, setHistory] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cf_history")) || [];
+    } catch {
+      return [];
+    }
+  });
+  const [copied, setCopied] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cf_history", JSON.stringify(history.slice(0, 20)));
+    } catch {
+      // ignore storage errors
+    }
+  }, [history]);
+
+  function pushHistory(item) {
+    setHistory((prev) => {
+      const next = [item, ...prev.filter((x) => x !== item)];
+      return next.slice(0, 20);
+    });
+  }
+
+  function clearHistory() {
+    setHistory([]);
+    try {
+      localStorage.removeItem("cf_history");
+      showToast("History cleared!");
+    } catch {}
+  }
+
+  function showToast(msg) {
+    setToastMessage(msg);
+  }
+
+  useEffect(() => {
+    if (copied) {
+      showToast(`Copied ${copied}!`);
+    }
+  }, [copied]);
+
+  return (
+    <>
+      <header className="cf-header">
+        <h1>Color Flipper</h1>
+        <p className="muted">Randomize, copy, tweak and save color palettes</p>
+      </header>
+
+      <main className="cf-main">
+        <div>
+          <ColorPreview
+            mode={mode}
+            colorA={colorA}
+            colorB={colorB}
+            format={format}
+            setCopied={setCopied}
+            pushHistory={pushHistory}
+            setColorA={setColorA}
+            setColorB={setColorB}
+          />
+        </div>
+
+        <aside>
+          <Controls
+            mode={mode}
+            setMode={setMode}
+            format={format}
+            setFormat={setFormat}
+            colorA={colorA}
+            setColorA={setColorA}
+            colorB={colorB}
+            setColorB={setColorB}
+            pushHistory={pushHistory}
+            clearHistory={clearHistory}
+            setCopied={setCopied}
+          />
+
+          <History
+            history={history}
+            setMode={setMode}
+            setColorA={setColorA}
+            setColorB={setColorB}
+            pushHistory={pushHistory}
+          />
+        </aside>
+      </main>
+
+      <footer className="cf-footer">
+        <small>Built with React + Vite • Keep experimenting ✨</small>
+      </footer>
+
+      <Toast message={toastMessage} onClose={() => setToastMessage("")} />
+    </>
+  );
+}
+
+export default ColorFlipper;
+```
+
+</Accordion>

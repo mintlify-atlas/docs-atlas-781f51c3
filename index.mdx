@@ -1,97 +1,51 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Color Flipper: interactive random color generator app"
+description: "Color Flipper is a React app for generating, previewing, and managing random colors in HEX and RGB formats, with gradient support and clipboard copy."
 ---
 
-## Setting up
+Color Flipper is a modern, interactive React 19 application that lets you generate random colors, switch between single-color and gradient modes, copy colors in HEX or RGB format, and maintain a persistent history of your favorite picks — all in a responsive, zero-dependency UI.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get the app running locally in under two minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Color modes" icon="palette" href="/features/color-modes">
+    Learn about single and gradient color generation modes.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Components" icon="puzzle-piece" href="/components/color-flipper">
+    Explore the React component tree and each component's props.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Utility functions" icon="function" href="/utilities/color-utils">
+    Reference for `randomHex`, `hexToRgb`, `formatValue`, and `copyValue`.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What Color Flipper does
 
-Everything you need to create world-class documentation.
+Color Flipper gives you a fast, visual workflow for discovering and capturing color values:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- **Generate** — click **Random** to instantly apply a new randomly-generated HEX color (or gradient pair).
+- **Preview** — the full-bleed preview panel updates in real time as colors change.
+- **Copy** — one click copies the formatted value to your clipboard with a brief toast confirmation.
+- **Save & reuse** — colors are saved to a scrollable history panel and persisted across sessions via `localStorage`.
 
-## Need inspiration?
+## Get started
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Clone and install">
+    Clone the repository and install dependencies with your preferred package manager.
+  </Step>
+  <Step title="Start the dev server">
+    Run `npm run dev` and open `http://localhost:5173` in your browser.
+  </Step>
+  <Step title="Generate your first color">
+    Click **Random** on the preview panel to generate your first color, then click **Copy** to grab the value.
+  </Step>
+  <Step title="Explore gradient mode">
+    Switch the **Mode** toggle to **Gradient** to generate two-color linear gradients.
+  </Step>
+</Steps>
+
+<Tip>
+  Colors you generate are automatically added to the **History** panel and persisted in `localStorage`, so your palette is preserved between browser sessions.
+</Tip>

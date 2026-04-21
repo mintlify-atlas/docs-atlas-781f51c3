@@ -1,0 +1,245 @@
+---
+title: "Controls component: mode, format, and color inputs"
+description: "Controls renders segmented Mode and Format toggles, Color A and B hex text inputs, and the Save to History and Clear History action buttons in one panel."
+---
+
+`Controls` is the configuration sidebar panel for the Color Flipper. It groups all user-facing inputs into a single `<section>`: segmented button pairs for switching **Mode** (`single` / `gradient`) and **Format** (`HEX` / `RGB`), text inputs for **Color A** and the conditionally rendered **Color B**, and action buttons to save the current color to history or clear all saved history. Every piece of state it reads or modifies is passed in as a prop from `ColorFlipper`.
+
+## Usage
+
+`Controls` is rendered inside the `<aside>` of `ColorFlipper` with all eleven props:
+
+```jsx ColorFlipper.jsx
+<Controls
+  mode={mode}
+  setMode={setMode}
+  format={format}
+  setFormat={setFormat}
+  colorA={colorA}
+  setColorA={setColorA}
+  colorB={colorB}
+  setColorB={setColorB}
+  pushHistory={pushHistory}
+  clearHistory={clearHistory}
+  setCopied={setCopied}
+/>
+```
+
+## Props
+
+<ParamField path="mode" type="string" required>
+  Current display mode: `"single"` or `"gradient"`. Determines which segmented button is active and whether the Color B input is shown.
+</ParamField>
+
+<ParamField path="setMode" type="function" required>
+  State setter for `mode`. Called with `"single"` or `"gradient"` when the user clicks the corresponding Mode button.
+</ParamField>
+
+<ParamField path="format" type="string" required>
+  Current output format: `"hex"` or `"rgb"`. Determines which Format button is active.
+</ParamField>
+
+<ParamField path="setFormat" type="function" required>
+  State setter for `format`. Called with `"hex"` or `"rgb"` when the user clicks the corresponding Format button.
+</ParamField>
+
+<ParamField path="colorA" type="string" required>
+  Current value of the primary color input, displayed as the controlled value of the Color A text field.
+</ParamField>
+
+<ParamField path="setColorA" type="function" required>
+  State setter for `colorA`. Called on every `onChange` event of the Color A input.
+</ParamField>
+
+<ParamField path="colorB" type="string" required>
+  Current value of the secondary color input, displayed in the Color B text field (visible only in gradient mode).
+</ParamField>
+
+<ParamField path="setColorB" type="function" required>
+  State setter for `colorB`. Called on every `onChange` event of the Color B input.
+</ParamField>
+
+<ParamField path="pushHistory" type="function" required>
+  Prepends the current color or gradient string to the history array. Called by `saveToHistory()` when the user clicks **Save to History**.
+</ParamField>
+
+<ParamField path="clearHistory" type="function" required>
+  Resets the history array to `[]` and removes the `cf_history` key from `localStorage`. Bound to the **Clear History** button.
+</ParamField>
+
+<ParamField path="setCopied" type="function" required>
+  State setter for `copied` in `ColorFlipper`. `saveToHistory()` calls this with `"Saved"` to trigger a toast notification after saving.
+</ParamField>
+
+## Mode and Format segmented buttons
+
+Each toggle is a pair of `<button>` elements wrapped in a `div.segmented`. The active button receives the `active` CSS class based on the current prop value.
+
+```jsx Controls.jsx
+<div className="segmented" role="tablist" aria-label="mode">
+  <button
+    className={mode === "single" ? "active" : ""}
+    onClick={() => setMode("single")}
+  >
+    Single
+  </button>
+  <button
+    className={mode === "gradient" ? "active" : ""}
+    onClick={() => setMode("gradient")}
+  >
+    Gradient
+  </button>
+</div>
+
+<div className="segmented small" role="tablist" aria-label="format">
+  <button
+    className={format === "hex" ? "active" : ""}
+    onClick={() => setFormat("hex")}
+  >
+    HEX
+  </button>
+  <button
+    className={format === "rgb" ? "active" : ""}
+    onClick={() => setFormat("rgb")}
+  >
+    RGB
+  </button>
+</div>
+```
+
+## Color A and Color B inputs
+
+Color A is always visible. Color B is rendered only when `mode === "gradient"`. Both are controlled inputs that call their respective setters on every keystroke.
+
+```jsx Controls.jsx
+<div>
+  <label>Color A</label>
+  <input
+    value={colorA}
+    onChange={(e) => setColorA(e.target.value)}
+    placeholder="#ff7a59"
+  />
+</div>
+
+{mode === "gradient" && (
+  <div>
+    <label>Color B</label>
+    <input
+      value={colorB}
+      onChange={(e) => setColorB(e.target.value)}
+      placeholder="#5ab1ff"
+    />
+  </div>
+)}
+```
+
+## Save to History and Clear History
+
+`saveToHistory` builds the appropriate string for the current mode, pushes it to history, and calls `setCopied("Saved")` to trigger the toast.
+
+```jsx Controls.jsx
+function saveToHistory() {
+  if (mode === "single") pushHistory(colorA);
+  else pushHistory(`linear-gradient(${colorA}, ${colorB})`);
+  setCopied("Saved");
+}
+```
+
+The **Clear History** button is styled with the `destructive` class and calls the `clearHistory` callback directly.
+
+<Tip>
+  Typing a custom hex value directly into the Color A or Color B inputs and pressing **Save to History** is the quickest way to add a specific color to your palette without generating a random one.
+</Tip>
+
+<Accordion title="Full source">
+
+```jsx Controls.jsx
+function Controls({
+  mode,
+  setMode,
+  format,
+  setFormat,
+  colorA,
+  setColorA,
+  colorB,
+  setColorB,
+  pushHistory,
+  clearHistory,
+  setCopied,
+}) {
+  function saveToHistory() {
+    if (mode === "single") pushHistory(colorA);
+    else pushHistory(`linear-gradient(${colorA}, ${colorB})`);
+    setCopied("Saved");
+  }
+
+  return (
+    <section className="cf-controls" aria-label="Controls">
+      <div className="row">
+        <label>Mode</label>
+        <div className="segmented" role="tablist" aria-label="mode">
+          <button
+            className={mode === "single" ? "active" : ""}
+            onClick={() => setMode("single")}
+          >
+            Single
+          </button>
+          <button
+            className={mode === "gradient" ? "active" : ""}
+            onClick={() => setMode("gradient")}
+          >
+            Gradient
+          </button>
+        </div>
+
+        <label>Format</label>
+        <div className="segmented small" role="tablist" aria-label="format">
+          <button
+            className={format === "hex" ? "active" : ""}
+            onClick={() => setFormat("hex")}
+          >
+            HEX
+          </button>
+          <button
+            className={format === "rgb" ? "active" : ""}
+            onClick={() => setFormat("rgb")}
+          >
+            RGB
+          </button>
+        </div>
+      </div>
+
+      <div className="row inputs">
+        <div>
+          <label>Color A</label>
+          <input
+            value={colorA}
+            onChange={(e) => setColorA(e.target.value)}
+            placeholder="#ff7a59"
+          />
+        </div>
+
+        {mode === "gradient" && (
+          <div>
+            <label>Color B</label>
+            <input
+              value={colorB}
+              onChange={(e) => setColorB(e.target.value)}
+              placeholder="#5ab1ff"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="row">
+        <button onClick={saveToHistory}>Save to History</button>
+        <button onClick={clearHistory} className="destructive">Clear History</button>
+      </div>
+    </section>
+  );
+}
+
+export default Controls;
+```
+
+</Accordion>

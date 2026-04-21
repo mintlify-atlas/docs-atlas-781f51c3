@@ -1,0 +1,128 @@
+---
+title: "Deploy Color Flipper to Vercel, Netlify, or GitHub Pages"
+description: "Publish Color Flipper to a live URL using Vercel, Netlify, or GitHub Pages — each platform serves the same optimized dist/ output."
+---
+
+Once you have a passing production build, deploying Color Flipper is a matter of pointing a hosting platform at your repository and telling it to run `npm run build` with `dist` as the output directory. The three options below cover the most common workflows: Vercel for the fastest path to a live URL, Netlify for flexible configuration, and GitHub Pages for zero-cost hosting directly from your repository.
+
+<Tip>
+  Vercel is the easiest option. It auto-detects Vite projects, requires no manual configuration, and deploys on every push to your default branch.
+</Tip>
+
+<Tabs>
+  <Tab title="Vercel">
+    Vercel detects Vite automatically and pre-fills the correct build settings, so deployment is usually a one-click import.
+
+    <Steps>
+      <Step title="Push your code to GitHub">
+        Make sure your Color Flipper repository is on GitHub and all changes are committed and pushed to your default branch.
+      </Step>
+
+      <Step title="Import the repository in Vercel">
+        Go to [vercel.com](https://vercel.com), sign in, and click **Add New → Project**. Select your Color Flipper repository from the list.
+      </Step>
+
+      <Step title="Confirm the build settings">
+        Vercel automatically detects the Vite framework and sets:
+
+        - **Build command:** `npm run build`
+        - **Output directory:** `dist`
+
+        You do not need to change these values.
+      </Step>
+
+      <Step title="Deploy">
+        Click **Deploy**. Vercel builds the project and provides a live URL when the deployment finishes. Every subsequent push to the default branch triggers a new deployment automatically.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Netlify">
+    Netlify connects to your GitHub repository and rebuilds Color Flipper on every push.
+
+    <Steps>
+      <Step title="Create a Netlify account">
+        Sign up at [netlify.com](https://www.netlify.com) if you do not already have an account.
+      </Step>
+
+      <Step title="Connect your GitHub repository">
+        From the Netlify dashboard, click **Add new site → Import an existing project** and authorize Netlify to access your GitHub account. Select your Color Flipper repository.
+      </Step>
+
+      <Step title="Configure the build settings">
+        Set the following values in the build configuration form:
+
+        - **Build command:** `npm run build`
+        - **Publish directory:** `dist`
+      </Step>
+
+      <Step title="Deploy the site">
+        Click **Deploy site**. Netlify installs dependencies, runs the build, and publishes the `dist/` directory. Your site will be live at a generated Netlify subdomain once the build completes.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="GitHub Pages">
+    GitHub Pages hosts static sites directly from your repository using the `gh-pages` package to publish the `dist/` output to a dedicated branch.
+
+    <Steps>
+      <Step title="Install the gh-pages package">
+        Add `gh-pages` as a development dependency:
+
+        ```bash
+        npm install gh-pages --save-dev
+        ```
+      </Step>
+
+      <Step title="Update vite.config.js with the base path">
+        GitHub Pages serves your site at `https://<username>.github.io/<repo-name>/`, so Vite needs to know the sub-path. Update `vite.config.js`:
+
+        ```js vite.config.js
+        import { defineConfig } from 'vite'
+        import react from '@vitejs/plugin-react'
+
+        export default defineConfig({
+          plugins: [react()],
+          base: '/<repo-name>/',
+        })
+        ```
+
+        Replace `<repo-name>` with your actual GitHub repository name.
+      </Step>
+
+      <Step title="Add homepage and deploy scripts to package.json">
+        Open `package.json` and add the `homepage` field and two new scripts:
+
+        ```json package.json
+        {
+          "homepage": "https://<your-username>.github.io/<repo-name>",
+          "scripts": {
+            "dev": "vite",
+            "build": "vite build",
+            "lint": "eslint .",
+            "preview": "vite preview",
+            "predeploy": "npm run build",
+            "deploy": "gh-pages -d dist"
+          }
+        }
+        ```
+
+        The `predeploy` script runs `npm run build` automatically before every deployment.
+      </Step>
+
+      <Step title="Deploy to GitHub Pages">
+        Run the deploy command:
+
+        ```bash
+        npm run deploy
+        ```
+
+        `gh-pages` builds the project and pushes the `dist/` directory to the `gh-pages` branch of your repository. Your site will be live at `https://<your-username>.github.io/<repo-name>/` within a minute.
+      </Step>
+    </Steps>
+
+    <Note>
+      The `base` setting in `vite.config.js` is required for GitHub Pages. Without it, Vite generates asset paths starting from `/`, which causes 404 errors when the site is served from a subdirectory like `/<repo-name>/`. You do not need this setting when deploying to Vercel or Netlify, which serve sites from the root.
+    </Note>
+  </Tab>
+</Tabs>

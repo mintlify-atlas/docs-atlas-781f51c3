@@ -1,0 +1,169 @@
+---
+title: "colorUtils.js — color utility functions API reference"
+description: "Reference for all four exported functions in colorUtils.js: random hex generation, HEX-to-RGB conversion, format switching, and clipboard copy."
+---
+
+The `colorUtils.js` module is the computational core of Color Flipper. It exports four pure or async utility functions that handle every stage of a color's lifecycle: generating a random value, converting between HEX and RGB formats, formatting a value before display, and writing it to the user's clipboard. All components that produce or display colors depend on one or more of these functions.
+
+---
+
+### `randomHex()`
+
+Generates a random 6-digit hexadecimal color string on every call. It picks a random integer in the range `0x000000`–`0xFFFFFF`, converts it to a base-16 string, and zero-pads to exactly six characters so that values like `#00a3b1` are always well-formed.
+
+```js
+export function randomHex() {
+  const n = Math.floor(Math.random() * 0xffffff);
+  return '#' + n.toString(16).padStart(6, '0');
+}
+```
+
+**Returns** — A `string` in the form `#rrggbb`, for example `#3a7bd5`. The leading `#` is always included and the value is always six hex digits long.
+
+<Note>
+  `randomHex()` takes no arguments. Call it directly — `randomHex()` — to get a new color on every invocation.
+</Note>
+
+---
+
+### `hexToRgb(hex)`
+
+Converts a six-digit hex color string to its CSS `rgb(r, g, b)` equivalent. If the input is not a valid six-character hex string the original value is returned unchanged, making the function safe to call with arbitrary input.
+
+<ParamField path="hex" type="string">
+  A color string to convert. Should be a six-digit hex value such as `#3a7bd5` or `3a7bd5` (the leading `#` is stripped automatically). Any other value passes through unmodified.
+</ParamField>
+
+```js
+export function hexToRgb(hex) {
+  const h = (hex || '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return hex;
+  const bigint = parseInt(h, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+```
+
+**Returns** — A `string` in the form `rgb(r, g, b)` when the input is a valid hex color, or the original `hex` argument when the validation regex fails.
+
+| Input | Output |
+|---|---|
+| `#3a7bd5` | `rgb(58, 123, 213)` |
+| `3a7bd5` | `rgb(58, 123, 213)` |
+| `not-a-color` | `not-a-color` (passthrough) |
+
+<Tip>
+  The passthrough behavior means `hexToRgb` is safe to chain — an already-invalid value will never throw and will simply be returned as-is.
+</Tip>
+
+---
+
+### `formatValue(value, format)`
+
+Formats a color value for display or copy based on the selected output format. It handles both plain hex strings and `linear-gradient(...)` strings, applying the appropriate conversion to every hex token it finds.
+
+<ParamField path="value" type="string">
+  The color value to format. May be a plain hex color like `#aabbcc` or a CSS gradient string like `linear-gradient(#aabbcc, #ddeeff)`.
+</ParamField>
+
+<ParamField path="format" type="string">
+  The target format. Accepts `'hex'` to return the value unchanged, or `'rgb'` to convert all hex tokens to `rgb(r, g, b)` notation.
+</ParamField>
+
+```js
+/**
+ * formatValue(value, format)
+ * - value: "#aabbcc" or "linear-gradient(#aabbcc, #ddeeff)"
+ * - format: 'hex' | 'rgb'
+ */
+export function formatValue(value, format) {
+  if (format === 'hex') return value;
+  if (!value) return value;
+  if (value.startsWith('linear-gradient')) {
+    const matches = value.match(/#([0-9a-fA-F]{6})/g) || [];
+    if (matches.length >= 2) return `linear-gradient(${hexToRgb(matches[0])}, ${hexToRgb(matches[1])})`;
+    return value;
+  }
+  return hexToRgb(value);
+}
+```
+
+**Returns** — The `value` string, formatted according to `format`.
+
+**HEX format** — the value is returned as-is:
+
+```js
+formatValue('#3a7bd5', 'hex')
+// → '#3a7bd5'
+
+formatValue('linear-gradient(#3a7bd5, #1a1c23)', 'hex')
+// → 'linear-gradient(#3a7bd5, #1a1c23)'
+```
+
+**RGB format** — hex tokens are replaced with `rgb(...)` equivalents:
+
+```js
+formatValue('#3a7bd5', 'rgb')
+// → 'rgb(58, 123, 213)'
+
+formatValue('linear-gradient(#3a7bd5, #1a1c23)', 'rgb')
+// → 'linear-gradient(rgb(58, 123, 213), rgb(26, 28, 35))'
+```
+
+<Info>
+  For gradient strings, `formatValue` extracts the first two hex matches using a regex and converts each independently. If fewer than two hex tokens are found the original gradient string is returned unchanged.
+</Info>
+
+---
+
+### `copyValue(text, setCopied)`
+
+Asynchronously writes a string to the user's clipboard and signals the UI that a copy has occurred. It uses the modern `navigator.clipboard` API as the primary path, with a `document.execCommand('copy')` textarea fallback for environments where the Clipboard API is unavailable. The copied state is always cleared automatically after 1400 ms.
+
+<ParamField path="text" type="string">
+  The string to write to the clipboard — typically the output of `formatValue()` for the currently displayed color.
+</ParamField>
+
+<ParamField path="setCopied" type="function">
+  A React state setter (or any function) that receives the copied text on success, an empty string `''` on failure, and `''` again after the 1400 ms auto-reset timeout. Pass `undefined` to skip all state updates.
+</ParamField>
+
+```js
+export async function copyValue(text, setCopied) {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (typeof setCopied === 'function') setCopied(text);
+  } catch (e) {
+    // fallback
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      if (typeof setCopied === 'function') setCopied(text);
+    } catch {
+      if (typeof setCopied === 'function') setCopied('');
+    }
+  } finally {
+    // reset copied after 1.4s if setter passed
+    if (typeof setCopied === 'function') {
+      setTimeout(() => setCopied(''), 1400);
+    }
+  }
+}
+```
+
+**Copy flow:**
+
+1. **Primary** — `navigator.clipboard.writeText(text)` is called. On success, `setCopied(text)` is invoked.
+2. **Fallback** — If the Clipboard API throws (e.g. in non-secure contexts or older browsers), a `<textarea>` is appended to the document, selected, and `document.execCommand('copy')` is called before the element is removed. `setCopied(text)` is invoked on success.
+3. **Failure** — If both paths fail, `setCopied('')` is called to signal that no copy occurred.
+4. **Auto-reset** — Regardless of the outcome, `setTimeout(() => setCopied(''), 1400)` fires in the `finally` block, clearing the copied indicator after 1.4 seconds.
+
+<Note>
+  `copyValue` is `async` but the `finally` block runs synchronously after the `await` resolves or rejects — the 1400 ms timer is always registered, even when both copy attempts fail.
+</Note>

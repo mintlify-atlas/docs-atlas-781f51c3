@@ -1,0 +1,138 @@
+---
+title: "Color Flipper project structure and source file layout"
+description: "How Color Flipper's source files are organized across the components directory, utility module, per-component stylesheets, and Vite configuration file."
+---
+
+Color Flipper follows a flat, conventional Vite + React layout. All application source lives under `src/`, and each major concern — components, utilities, and styles — has its own subdirectory to keep the codebase easy to navigate.
+
+## Directory tree
+
+```
+color-flipper/
+├── src/
+│   ├── assets/        # Static assets
+│   ├── components/    # Reusable React components (ColorFlipper, ColorPreview, Controls, History, Toast)
+│   ├── styles/        # CSS stylesheets for modular component styles
+│   ├── utils/         # Utility functions
+│   ├── App.jsx        # Main application component
+│   ├── main.jsx       # React entry point
+│   └── index.css      # Global styles
+├── index.html         # HTML template
+├── package.json       # Project dependencies and scripts
+└── vite.config.js     # Vite configuration
+```
+
+## Source directories and files
+
+### `src/components/`
+
+Contains the five React components that make up the UI:
+
+| File | Responsibility |
+|---|---|
+| `ColorFlipper.jsx` | Root component — owns all state (mode, format, colors, history, toast) and composes the other components |
+| `ColorPreview.jsx` | Full-bleed color swatch that displays the current color or gradient and exposes copy and randomize actions |
+| `Controls.jsx` | Segmented mode/format toggles and Color A / Color B hex inputs; also provides Save and Clear History buttons |
+| `History.jsx` | Scrollable list of previously generated colors, with click-to-restore functionality |
+| `Toast.jsx` | Ephemeral notification banner shown after clipboard copy or history actions |
+
+`ColorFlipper.jsx` is the single source of truth for application state. It initializes `history` from `localStorage` and keeps the stored value in sync via a `useEffect`:
+
+```jsx
+const [history, setHistory] = useState(() => {
+  try {
+    return JSON.parse(localStorage.getItem("cf_history")) || [];
+  } catch {
+    return [];
+  }
+});
+```
+
+### `src/utils/`
+
+Contains one file — `colorUtils.js` — with four exported functions:
+
+| Function | Description |
+|---|---|
+| `randomHex()` | Returns a random 6-digit HEX string, e.g. `#a3f2c1` |
+| `hexToRgb(hex)` | Converts a HEX string to an `rgb(r, g, b)` string |
+| `formatValue(value, format)` | Applies `hexToRgb` to a plain color or to both stops of a `linear-gradient` string |
+| `copyValue(text, setCopied)` | Writes text to the clipboard using the Clipboard API, with a `document.execCommand` fallback |
+
+### `src/styles/`
+
+Each visual concern has its own stylesheet, all imported at the top of `App.jsx`:
+
+| File | Covers |
+|---|---|
+| `layout.css` | Page-level grid and flexbox rules for `.cf-app`, `.cf-main`, header, and footer |
+| `preview.css` | Color preview panel dimensions, swatch rendering, and copy button positioning |
+| `buttons.css` | Shared button base styles, active states, and the `.destructive` variant |
+| `controls.css` | Controls section layout, segmented toggle styles, and text inputs |
+| `history.css` | History panel scroll container and color chip styles |
+| `responsive.css` | Media queries for mobile and tablet breakpoints |
+| `Toast.css` | Toast notification positioning, animation, and visibility transitions |
+
+This one-stylesheet-per-component approach means you can change the appearance of any individual component without touching unrelated styles.
+
+### `App.jsx`
+
+The root component wraps `ColorFlipper` in a single `div.cf-app` and imports every stylesheet:
+
+```jsx
+import React from "react";
+import ColorFlipper from "./components/ColorFlipper";
+import './styles/layout.css';
+import './styles/preview.css';
+import './styles/buttons.css';
+import './styles/controls.css';
+import './styles/history.css';
+import './styles/responsive.css';
+
+const App = () => {
+  return (
+    <div className="cf-app">
+      <ColorFlipper />
+    </div>
+  );
+};
+
+export default App;
+```
+
+### `main.jsx`
+
+The React entry point. It mounts `<App />` inside `React.StrictMode` onto the `#root` element in `index.html`:
+
+```jsx
+import React from "react";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+
+const rootElement = document.getElementById("root");
+const root = createRoot(rootElement);
+
+root.render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
+```
+
+### `vite.config.js`
+
+Minimal Vite configuration that enables the React plugin for JSX transform and Fast Refresh:
+
+```js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+<Note>
+  If you deploy to GitHub Pages, add a `base` option to `vite.config.js` matching your repository name — for example `base: '/Color-Flipper/'` — so that asset paths resolve correctly from a subdirectory URL.
+</Note>

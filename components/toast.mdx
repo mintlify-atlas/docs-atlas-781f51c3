@@ -1,0 +1,81 @@
+---
+title: "Toast component: auto-dismissing notification overlay"
+description: "Toast renders a brief notification overlay that automatically dismisses itself after 2000 ms and returns null when the message string is empty."
+---
+
+`Toast` is a lightweight notification component that displays a single line of text in a floating overlay and disappears automatically. It renders nothing when `message` is an empty string, making it safe to mount unconditionally. When a non-empty `message` is passed, the component renders and simultaneously starts a 2000 ms timer; when the timer fires it calls `onClose`, which should clear the message in the parent's state. The timer is cancelled if `message` changes before it fires, preventing stale callbacks.
+
+## Usage
+
+`Toast` is mounted once at the bottom of the `ColorFlipper` render tree, outside the `<main>` layout:
+
+```jsx ColorFlipper.jsx
+<Toast message={toastMessage} onClose={() => setToastMessage("")} />
+```
+
+`toastMessage` is set by the internal `showToast` helper, which is called when a color is copied (`Copied #rrggbb!`) or when history is cleared (`History cleared!`).
+
+## Props
+
+<ParamField path="message" type="string" required>
+  The text to display inside the toast. When this is an empty string, the component returns `null` and renders nothing. When it changes to a non-empty string, the auto-dismiss timer starts.
+</ParamField>
+
+<ParamField path="onClose" type="function" required>
+  Callback invoked when the 2000 ms auto-dismiss timer fires. Should set the parent's message state back to `""` to unmount the toast.
+</ParamField>
+
+## Auto-dismiss behaviour
+
+The dismiss logic runs inside a `useEffect` that depends on both `message` and `onClose`. A new `setTimeout` is created every time `message` changes to a truthy value, and the cleanup function cancels it if the component re-renders before the timeout fires.
+
+```jsx Toast.jsx
+useEffect(() => {
+  if (message) {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 2000); // auto dismiss
+    return () => clearTimeout(timer);
+  }
+}, [message, onClose]);
+```
+
+## Render behaviour
+
+The component returns `null` immediately when `message` is falsy, which keeps it out of the DOM entirely between notifications.
+
+```jsx Toast.jsx
+if (!message) return null;
+
+return <div className="toast">{message}</div>;
+```
+
+<Info>
+  Styles for the toast overlay are imported from `../styles/Toast.css`. The `toast` class controls positioning, background, and entrance animation.
+</Info>
+
+<Accordion title="Full source">
+
+```jsx Toast.jsx
+import { useEffect } from "react";
+import "../styles/Toast.css";
+
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2000); // auto dismiss
+      return () => clearTimeout(timer);
+    }
+  }, [message, onClose]);
+
+  if (!message) return null;
+
+  return <div className="toast">{message}</div>;
+}
+
+export default Toast;
+```
+
+</Accordion>

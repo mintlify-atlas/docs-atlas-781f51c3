@@ -1,0 +1,45 @@
+---
+title: "What is Color Flipper? A React color generation app"
+description: "Color Flipper is a React 19 app for generating random colors in HEX and RGB, with gradient support, clipboard copy, and a persistent color history."
+---
+
+Color Flipper is a modern, interactive application built with React 19 and Vite that lets you generate random colors instantly, switch between single-color and gradient modes, preview results full-bleed, and copy formatted values to your clipboard — all without a backend or external dependencies.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get the app cloned, installed, and running locally in a few commands.
+  </Card>
+  <Card title="Color modes" icon="palette" href="/features/color-modes">
+    Toggle between single-color and two-color linear gradient generation.
+  </Card>
+  <Card title="Color formats" icon="code" href="/features/color-formats">
+    Output colors as HEX or RGB strings with a single click.
+  </Card>
+  <Card title="Color history" icon="clock-rotate-left" href="/features/history">
+    Every generated color is saved to a scrollable, persistent history panel.
+  </Card>
+</CardGroup>
+
+## What it does
+
+Color Flipper gives you a fast, visual workflow for discovering and capturing color values:
+
+- **Generate** — click **Random** on the preview panel to apply a new randomly-generated HEX color, or a gradient pair when in Gradient mode.
+- **Preview** — the full-bleed preview panel updates in real time as colors change, so you can evaluate them at a glance.
+- **Copy** — one click copies the formatted value (HEX or RGB) to your clipboard, confirmed by a brief toast notification.
+- **Save and reuse** — colors are added to the History panel automatically and persisted across browser sessions via `localStorage`.
+- **Tweak manually** — the Color A and Color B inputs let you type any HEX value directly without leaving the UI.
+
+## Tech stack
+
+| Technology | Version | Role |
+|---|---|---|
+| [React](https://react.dev/) | 19 | UI library |
+| [Vite](https://vitejs.dev/) | 7 | Dev server and build tool |
+| CSS3 | — | Modular per-component stylesheets |
+
+<Note>
+  Color Flipper has no runtime dependencies beyond React and React DOM. All color math is handled by the utility functions in `src/utils/colorUtils.js` — no color library required.
+</Note>

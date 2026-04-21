@@ -1,0 +1,176 @@
+---
+title: "ColorPreview component: live color swatch and actions"
+description: "ColorPreview renders a full-bleed color swatch, shows the formatted color value, and provides Random and Copy action buttons for the active color or gradient."
+---
+
+`ColorPreview` is the visual centrepiece of the Color Flipper UI. It renders a full-bleed `<section>` whose background is set to either a solid color (`colorA`) or a `linear-gradient(135deg, colorA, colorB)` depending on the current `mode`. It also displays the formatted color value string and exposes two actions — **Random** (generates new colors and pushes them to history) and **Copy** (formats the value and writes it to the clipboard).
+
+## Usage
+
+`ColorPreview` is rendered inside `ColorFlipper` with all eight props supplied:
+
+```jsx ColorFlipper.jsx
+<ColorPreview
+  mode={mode}
+  colorA={colorA}
+  colorB={colorB}
+  format={format}
+  setCopied={setCopied}
+  pushHistory={pushHistory}
+  setColorA={setColorA}
+  setColorB={setColorB}
+/>
+```
+
+## Props
+
+<ParamField path="mode" type="string" required>
+  Display mode. `"single"` renders a solid background using `colorA`. `"gradient"` renders a `linear-gradient(135deg, colorA, colorB)` background.
+</ParamField>
+
+<ParamField path="colorA" type="string" required>
+  Primary color as a hex string (e.g. `"#ff7a59"`). Used as the sole color in single mode and as the first stop in gradient mode.
+</ParamField>
+
+<ParamField path="colorB" type="string" required>
+  Secondary color as a hex string. Used as the second stop in gradient mode. Ignored when `mode` is `"single"`.
+</ParamField>
+
+<ParamField path="format" type="string" required>
+  Output format for the displayed and copied value. `"hex"` returns the raw hex string; `"rgb"` converts it via `formatValue` from `colorUtils`.
+</ParamField>
+
+<ParamField path="setCopied" type="function" required>
+  State setter from `ColorFlipper`. Called with the formatted color string after a successful clipboard write, which triggers a toast notification upstream.
+</ParamField>
+
+<ParamField path="pushHistory" type="function" required>
+  Callback that prepends a color or gradient string to the history array. Called by `applyRandom()` every time new colors are generated.
+</ParamField>
+
+<ParamField path="setColorA" type="function" required>
+  State setter for `colorA`. Called by `applyRandom()` to update the primary color.
+</ParamField>
+
+<ParamField path="setColorB" type="function" required>
+  State setter for `colorB`. Called by `applyRandom()` in gradient mode to update the secondary color.
+</ParamField>
+
+## Preview background logic
+
+The component derives its inline `style` at render time:
+
+```jsx ColorPreview.jsx
+const previewStyle =
+  mode === "single"
+    ? { background: colorA }
+    : { background: `linear-gradient(135deg, ${colorA}, ${colorB})` };
+```
+
+This style is applied directly to the `<section>` element, giving an immediate full-bleed visual representation of the current color state.
+
+## `applyRandom()`
+
+Generates new random hex values and pushes them to history. In single mode it updates only `colorA`; in gradient mode it updates both colors and stores the gradient string.
+
+```jsx ColorPreview.jsx
+function applyRandom() {
+  if (mode === "single") {
+    const h = randomHex();
+    setColorA(h);
+    pushHistory(h);
+  } else {
+    const h1 = randomHex();
+    const h2 = randomHex();
+    setColorA(h1);
+    setColorB(h2);
+    pushHistory(`linear-gradient(${h1}, ${h2})`);
+  }
+}
+```
+
+## `handleCopy()`
+
+Builds the full color value string for the current mode, formats it according to `format`, and writes it to the clipboard via the shared `copyValue` utility.
+
+```jsx ColorPreview.jsx
+function handleCopy() {
+  const value =
+    mode === "single"
+      ? colorA
+      : `linear-gradient(${colorA}, ${colorB})`;
+  copyValue(formatValue(value, format), setCopied);
+}
+```
+
+<Note>
+  `copyValue` calls `setCopied` with the copied string. `ColorFlipper` watches `copied` in a `useEffect` and calls `showToast` to display confirmation.
+</Note>
+
+<Accordion title="Full source">
+
+```jsx ColorPreview.jsx
+import { formatValue, copyValue, randomHex } from "../utils/colorUtils";
+
+function ColorPreview({
+  mode,
+  colorA,
+  colorB,
+  format,
+  setCopied,
+  pushHistory,
+  setColorA,
+  setColorB,
+}) {
+  const previewStyle =
+    mode === "single"
+      ? { background: colorA }
+      : { background: `linear-gradient(135deg, ${colorA}, ${colorB})` };
+
+  function applyRandom() {
+    if (mode === "single") {
+      const h = randomHex();
+      setColorA(h);
+      pushHistory(h);
+    } else {
+      const h1 = randomHex();
+      const h2 = randomHex();
+      setColorA(h1);
+      setColorB(h2);
+      pushHistory(`linear-gradient(${h1}, ${h2})`);
+    }
+  }
+
+  function handleCopy() {
+    const value =
+      mode === "single"
+        ? colorA
+        : `linear-gradient(${colorA}, ${colorB})`;
+    copyValue(formatValue(value, format), setCopied);
+  }
+
+  return (
+    <section className="cf-preview" style={previewStyle}>
+      <div className="cf-info" role="region" aria-label="Color preview">
+        <div className="cf-value">
+          {formatValue(
+            mode === "single"
+              ? colorA
+              : `linear-gradient(${colorA}, ${colorB})`,
+            format
+          )}
+        </div>
+
+        <div className="cf-actions">
+          <button onClick={handleCopy} aria-label="Copy color">Copy</button>
+          <button onClick={applyRandom} aria-label="Random color">Random</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default ColorPreview;
+```
+
+</Accordion>

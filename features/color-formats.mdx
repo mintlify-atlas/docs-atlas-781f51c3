@@ -1,0 +1,109 @@
+---
+title: 'HEX and RGB output format support in Color Flipper'
+description: 'Color Flipper displays and copies colors in either HEX or RGB format. Switch between them instantly without changing the underlying color values.'
+---
+
+Color Flipper stores all colors internally as six-digit hex strings (e.g. `#3a7bd5`) and converts to RGB on the fly when needed. The active format affects what is shown in the preview panel, what the **Copy** button writes to your clipboard, and what gets saved when you use **Save to History** — but it never alters `colorA` or `colorB` in state.
+
+## Format state
+
+The selected format lives alongside the mode state in `ColorFlipper.jsx`:
+
+```jsx ColorFlipper.jsx
+const [format, setFormat] = useState("hex"); // 'hex' | 'rgb'
+```
+
+## Switching formats
+
+A second segmented button group in the Controls panel handles format selection:
+
+```jsx Controls.jsx
+<div className="segmented small" role="tablist" aria-label="format">
+  <button
+    className={format === "hex" ? "active" : ""}
+    onClick={() => setFormat("hex")}
+  >
+    HEX
+  </button>
+  <button
+    className={format === "rgb" ? "active" : ""}
+    onClick={() => setFormat("rgb")}
+  >
+    RGB
+  </button>
+</div>
+```
+
+The change takes effect immediately — the preview value and any subsequent copy or save actions all use the newly selected format.
+
+## How format conversion works
+
+### `hexToRgb`
+
+Parses a six-digit hex string and returns a CSS `rgb()` string. If the input is not a valid six-digit hex the original value is returned unchanged:
+
+```js colorUtils.js
+export function hexToRgb(hex) {
+  const h = (hex || '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return hex;
+  const bigint = parseInt(h, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+```
+
+### `formatValue`
+
+`formatValue` is the single function that applies the current format to any value — whether it is a plain hex color or a full gradient string. It is used in `ColorPreview.jsx` for both the on-screen label and the value passed to `copyValue`:
+
+```js colorUtils.js
+export function formatValue(value, format) {
+  if (format === 'hex') return value;
+  if (!value) return value;
+  if (value.startsWith('linear-gradient')) {
+    const matches = value.match(/#([0-9a-fA-F]{6})/g) || [];
+    if (matches.length >= 2) return `linear-gradient(${hexToRgb(matches[0])}, ${hexToRgb(matches[1])})`;
+    return value;
+  }
+  return hexToRgb(value);
+}
+```
+
+`formatValue` is called directly inside `ColorPreview.jsx` to produce the string shown in the UI and passed to the clipboard:
+
+```jsx ColorPreview.jsx
+function handleCopy() {
+  const value =
+    mode === "single"
+      ? colorA
+      : `linear-gradient(${colorA}, ${colorB})`;
+  copyValue(formatValue(value, format), setCopied);
+}
+```
+
+## Output examples
+
+<Tabs>
+  <Tab title="HEX format">
+    When the format is set to `hex`, values are returned as-is. No conversion is applied.
+
+    | Mode | Displayed value |
+    |------|----------------|
+    | Single | `#3a7bd5` |
+    | Gradient | `linear-gradient(#3a7bd5, #5ab1ff)` |
+  </Tab>
+  <Tab title="RGB format">
+    When the format is set to `rgb`, `formatValue` converts every hex stop to a `rgb()` value.
+
+    | Mode | Displayed value |
+    |------|----------------|
+    | Single | `rgb(58, 123, 213)` |
+    | Gradient | `linear-gradient(rgb(58, 123, 213), rgb(90, 177, 255))` |
+  </Tab>
+</Tabs>
+
+<Note>
+  The underlying `colorA` and `colorB` state values are always hex strings. RGB conversion is purely presentational and is recalculated on every render.
+</Note>

@@ -1,0 +1,410 @@
+---
+title: "Styling architecture and CSS customization reference"
+description: "Color Flipper splits styles into one file per component, making each part independently customizable without touching unrelated CSS rules."
+---
+
+Color Flipper's styles are split across eight dedicated CSS files, each scoped to a single concern. `App.jsx` imports them all at the top level, so every stylesheet is active for the full application. Design tokens such as color variables, border radii, and transition speeds are declared once in `layout.css` as CSS custom properties and consumed by every other file, meaning a single change to a token cascades consistently across the whole UI.
+
+---
+
+## CSS architecture overview
+
+```
+src/
+├── index.css          ← global reset and base browser defaults
+└── styles/
+    ├── layout.css     ← CSS variables, body, and main grid
+    ├── preview.css    ← color preview panel
+    ├── buttons.css    ← all button variants
+    ├── controls.css   ← controls panel and form inputs
+    ├── history.css    ← history grid and color chips
+    ├── responsive.css ← media queries (400 px – 1200 px)
+    └── Toast.css      ← toast notification overlay
+```
+
+All imports live in `App.jsx`:
+
+```jsx
+import './styles/layout.css';
+import './styles/preview.css';
+import './styles/buttons.css';
+import './styles/controls.css';
+import './styles/history.css';
+import './styles/responsive.css';
+```
+
+<Info>
+  `index.css` and `Toast.css` are loaded outside of `App.jsx`. `index.css` is imported in the Vite entry point (`main.jsx`) and `Toast.css` is imported directly by the Toast component.
+</Info>
+
+---
+
+## Stylesheet reference
+
+<AccordionGroup>
+
+  <Accordion title="layout.css — CSS variables, body, and main grid">
+    This is the foundation of the entire design system. It declares all CSS custom properties in `:root`, sets the global `body` styles, and defines the two-column `cf-main` grid that splits the preview panel from the controls sidebar.
+
+    **CSS variables:**
+
+    ```css
+    :root {
+      --bg-dark: #0e0f12;
+      --bg-card: #1a1c23;
+
+      --bg-accent: #2563eb;
+      --bg-accent-hover: #3b82f6;
+
+      --success: #22c55e;
+      --danger: #ef4444;
+
+      --text-primary: #f3f4f6;
+      --text-muted: #9ca3af;
+
+      --radius: 12px;
+      --transition: 0.25s ease;
+    }
+    ```
+
+    **Layout classes:**
+
+    ```css
+    .cf-app {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 20px;
+    }
+
+    .cf-main {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 24px;
+      margin-top: 24px;
+      align-items: start;
+    }
+
+    .cf-footer {
+      margin-top: 28px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    ```
+
+    **Key classes:** `.cf-app`, `.cf-main`, `.cf-header`, `.cf-footer`
+
+    **To customize:** Override any `--variable` in your own stylesheet or in a `:root` block that loads after `layout.css`. To change the sidebar width, update the `350px` track in `.cf-main`'s `grid-template-columns`.
+  </Accordion>
+
+  <Accordion title="preview.css — color preview panel">
+    Styles the large color swatch that fills the left column. The panel uses `align-items: flex-end` to push the info overlay to the bottom, and `backdrop-filter: blur(8px)` on `.cf-info` to keep the text legible over any background color.
+
+    ```css
+    .cf-preview {
+      min-height: 340px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: flex-end;
+      padding: 18px;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .cf-info {
+      backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.25);
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      margin: 10px;
+      transition: var(--transition);
+    }
+
+    .cf-value {
+      font-family: monospace;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .cf-copied {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #4ade80;
+      font-weight: 500;
+    }
+    ```
+
+    **Key classes:** `.cf-preview`, `.cf-info`, `.cf-value`, `.cf-actions`, `.cf-copied`
+
+    **To customize:** Change `min-height` on `.cf-preview` to adjust the swatch size. Modify the `rgba(0, 0, 0, 0.25)` background on `.cf-info` to control overlay opacity. The `#4ade80` success green on `.cf-copied` can be replaced with `var(--success)` to tie it to the design token.
+  </Accordion>
+
+  <Accordion title="buttons.css — button styles and variants">
+    Provides global `button` element styles and a `.destructive` modifier class. All buttons use `var(--bg-accent)` by default and lift slightly on hover via `translateY(-2px)`.
+
+    ```css
+    button {
+      background: var(--bg-accent);
+      border: none;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    button:hover {
+      background: var(--bg-accent-hover);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    button.destructive {
+      background: #a42834;
+    }
+
+    button.destructive:hover {
+      background: #c7424e;
+    }
+    ```
+
+    **Key classes:** `button`, `button.destructive`
+
+    **To customize:** Update `--bg-accent` and `--bg-accent-hover` in `layout.css` to retheme all non-destructive buttons at once. For the destructive variant only, override the hardcoded `#a42834` value directly in `buttons.css` or in a later stylesheet.
+  </Accordion>
+
+  <Accordion title="controls.css — controls panel and form inputs">
+    Styles the sidebar controls card, the segmented mode switcher, and all text inputs. The `.segmented` component uses a dark pill container (`#0f172a`) with the active segment highlighted by `var(--bg-accent)`.
+
+    ```css
+    .cf-controls {
+      background: var(--bg-card);
+      padding: 16px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .segmented {
+      display: flex;
+      background: #0f172a;
+      border-radius: var(--radius);
+      padding: 4px;
+    }
+
+    .segmented .active {
+      background: var(--bg-accent);
+    }
+
+    input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      color: #fff;
+      transition: var(--transition);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--bg-accent-hover);
+      box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.5);
+    }
+    ```
+
+    **Key classes:** `.cf-controls`, `.row`, `.segmented`, `.segmented .active`, `.inputs`, `input`, `input:focus`
+
+    **To customize:** The focus ring color (`rgba(56, 139, 253, 0.5)`) is currently hardcoded. Replace it with a `rgba` derived from `--bg-accent-hover` if you change the accent color.
+  </Accordion>
+
+  <Accordion title="history.css — history grid and color chips">
+    Styles the color history panel that appears below the controls. Each history entry is a `.history-item` button containing a `.chip` swatch and a label. The grid uses `flex-wrap: wrap` to reflow items across multiple rows as the list grows.
+
+    ```css
+    .history {
+      margin-top: 8px;
+      background: var(--bg-card);
+      padding: 16px;
+      border-radius: var(--radius);
+    }
+
+    .history-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .chip {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      box-shadow: inset 0 -4px 10px rgba(0, 0, 0, 0.25);
+    }
+    ```
+
+    **Key classes:** `.history`, `.history-grid`, `.history-item`, `.chip`
+
+    **To customize:** Increase the `width` and `height` on `.chip` for larger swatches, or adjust `gap` on `.history-grid` to control spacing between entries.
+  </Accordion>
+
+  <Accordion title="responsive.css — media queries for mobile and tablet">
+    Collapses the two-column grid into a single column on narrower viewports and progressively reduces font sizes and button dimensions. Five breakpoints are defined: 1200 px, 960 px, 768 px, 600 px, and 400 px.
+
+    ```css
+    @media (max-width: 1200px) {
+      .cf-main {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .cf-main {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+      }
+      .cf-preview {
+        min-height: 300px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .cf-controls {
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .cf-preview {
+        min-height: 240px;
+      }
+      .cf-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .cf-toast {
+        bottom: 1rem;
+        width: 90%;
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      button {
+        width: 100%;
+        padding: 10px;
+        font-size: 0.85rem;
+      }
+    }
+    ```
+
+    **Key breakpoints:** `1200px`, `960px`, `768px`, `600px`, `400px`
+
+    **To customize:** Add new breakpoints at the bottom of `responsive.css` rather than editing existing ones, so you can always identify which rules are project defaults versus your own overrides.
+  </Accordion>
+
+  <Accordion title="Toast.css — toast notification overlay">
+    Styles the fixed-position toast that appears in the bottom-right corner after a user action. The `fadeInOut` keyframe animation handles both entry and exit — the toast fades in over the first 10% of a 2-second cycle and fades out over the final 10%.
+
+    ```css
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #2c3e50;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      font-size: 14px;
+      animation: fadeInOut 2s ease forwards;
+      z-index: 9999;
+    }
+
+    @keyframes fadeInOut {
+      0%   { opacity: 0; transform: translateY(20px); }
+      10%  { opacity: 1; transform: translateY(0); }
+      90%  { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(20px); }
+    }
+    ```
+
+    **Key classes:** `.toast`
+
+    **To customize:** Change the `2s` duration in `animation: fadeInOut 2s ease forwards` to control how long the toast stays visible. Update `bottom` and `right` to reposition it, or change `background: #2c3e50` to use `var(--bg-card)` for a theme-consistent surface.
+  </Accordion>
+
+  <Accordion title="index.css — global reset and base defaults">
+    The Vite-generated base stylesheet that establishes browser defaults for `:root`, `body`, `a`, `h1`, and `button` before any component styles are applied. It also includes a `prefers-color-scheme: light` media query that switches the root background and link colors.
+
+    ```css
+    :root {
+      font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      font-weight: 400;
+
+      color-scheme: light dark;
+      color: rgba(255, 255, 255, 0.87);
+      background-color: #242424;
+
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      display: flex;
+      place-items: center;
+      min-width: 320px;
+      min-height: 100vh;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        color: #213547;
+        background-color: #ffffff;
+      }
+    }
+    ```
+
+    **Key selectors:** `:root`, `body`, `a`, `h1`, `button`
+
+    **To customize:** The `body` rules in `index.css` are overridden by `layout.css` — `layout.css` wins because it loads later. Edits to `index.css` are most impactful for link color (`#646cff`) and the light-mode color scheme override.
+
+    <Tip>
+      `index.css` is the appropriate place for global font stack changes if you want a different typeface applied before any component-level stylesheet loads.
+    </Tip>
+  </Accordion>
+
+</AccordionGroup>
